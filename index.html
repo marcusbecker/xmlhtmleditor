@@ -1,0 +1,132 @@
+<html>
+
+<head>
+   <style>
+      label {
+         padding: 5px;
+         margin-left: 4px;
+         display: inline-block;
+         min-width: 110px;
+         margin-right: 2px;
+      }
+
+      input[type="text"] {
+         width: 340px;
+      }
+
+      h2 a {
+         font-size: 10px;
+         font-weight: 100;
+      }
+
+      #xmlResult {
+         width: 98%;
+         display: none;
+      }
+
+      #drop_zone {
+         border: 2px dashed #bbb;
+         border-radius: 5px;
+         padding: 25px;
+         text-align: center;
+         color: #bbb;
+      }
+
+      #btnDownload {
+         display: none;
+      }
+   </style>
+   <script src="xml_parser.js"></script>
+</head>
+
+<body>
+   <form id="frm" method="post">
+      <div id="output"></div>
+      <br />
+      <input id="btnDownload" type="button" value="Download XML" onclick="generateFile(this);" />
+      <br />
+      <input type="hidden" id="files" name="files[]" multiple />
+      <div id="drop_zone">Drop files here</div>
+      <textarea id="xmlResult"></textarea>
+   </form>
+
+   <script>
+      const fUtil = new FileDragDropUtil();
+      const xmlConverter = new XMLDataConverter();
+      const htmlConverter = new HTMLDataConverter();
+      const htmlEl = document.getElementById("output");
+      const btnDownload = document.getElementById("btnDownload");
+
+      fUtil.init('drop_zone', function handle(evt) {
+         evt.stopPropagation();
+         evt.preventDefault();
+         const files = evt.dataTransfer.files;
+
+         // File properties: name, type, size, lastModifiedDate
+         for (let i = 0, f; f = files[i]; ++i) {
+            console.log(f.name + ' ' + f.type);
+            if (!f.type.match('text/xml')) {
+               continue;
+            }
+
+            const reader = new FileReader();
+
+            // Closure to capture the file information.
+            reader.onload = (function (theFile) {
+               return function (e) {
+                  xmlConverter.resourceToData(e.target.result);
+                  htmlEl.innerHTML = htmlConverter.dataToResource(xmlConverter.getData());
+                  btnDownload.style.display = 'block';
+               };
+            })(f);
+
+            reader.readAsText(f);
+
+            break;
+         }
+      });
+
+      function editIt(el, id) {
+         let src = document.getElementById("title_" + id);
+         let name = el.getAttribute('data-name');
+         let parent = el.getAttribute('data-parent');
+         inId = el.getAttribute('data-iid');
+         src.parentElement.innerHTML = htmlInput(parent, name, '');
+      }
+
+      function generateFile(btn) {
+         const xmlData = xmlConverter.dataToResource(htmlConverter.resourceToData(htmlEl));
+         const xmlString = new XMLSerializer().serializeToString(xmlData);
+         //document.getElementById('xmlResult').innerHTML = xmlString;
+         downloadFile('filename.xml', xmlString);
+      }
+
+      function downloadFile(filename, text) {
+         var element = document.createElement('a');
+         element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+         element.setAttribute('download', filename);
+
+         element.style.display = 'none';
+         document.body.appendChild(element);
+
+         element.click();
+
+         document.body.removeChild(element);
+      }
+
+      function test() {
+         xmlConverter.resourceToData(getMockData());
+         xmlConverter.print();
+         htmlEl.innerHTML = htmlConverter.dataToResource(xmlConverter.getData());
+      }
+
+      function getMockData() {
+         const text = '<bookstore><book category="cooking"> <title lang="en">Everyday Italian</title> <author>Giada De Laurentiis</author> <year>2005</year> <price>30.00</price></book><book category="children"> <title lang="en">Harry Potter</title> <author>J K. Rowling</author> <year>2005</year> <price>29.99</price></book></bookstore>';
+         return text;
+      }
+
+   </script>
+
+</body>
+
+</html>
