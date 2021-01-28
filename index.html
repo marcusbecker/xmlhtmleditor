@@ -2,6 +2,9 @@
 
 <head>
    <style>
+      body {
+         font-family: "Alegreya", sans-serif;
+      }
       label {
          padding: 5px;
          margin-left: 4px;
@@ -12,6 +15,9 @@
 
       input[type="text"] {
          width: 340px;
+      }
+      .edit-text {
+         width: 80%;
       }
 
       h2 a {
@@ -35,18 +41,28 @@
       #btnDownload {
          display: none;
       }
+      div#message {
+         width: 98%;
+         background-color: #d3f3af;
+         margin: 8px;
+         padding: 13px;
+         text-align: center;
+         color: #bbb;
+         display: none;
+      }
    </style>
    <script src="xml_parser.js"></script>
 </head>
 
 <body>
+   <div id="message"></div>
    <form id="frm" method="post">
       <div id="output"></div>
       <br />
       <input id="btnDownload" type="button" value="Download XML" onclick="generateFile(this);" />
       <br />
       <input type="hidden" id="files" name="files[]" multiple />
-      <div id="drop_zone">Drop files here</div>
+      <div id="drop_zone">Drop XML files here</div>
       <textarea id="xmlResult"></textarea>
    </form>
 
@@ -56,6 +72,7 @@
       const htmlConverter = new HTMLDataConverter();
       const htmlEl = document.getElementById("output");
       const btnDownload = document.getElementById("btnDownload");
+      let fileName = '';
 
       fUtil.init('drop_zone', function handle(evt) {
          evt.stopPropagation();
@@ -70,13 +87,15 @@
             }
 
             const reader = new FileReader();
-
+            showMessage(`Loading file ${f.name}`, true);
             // Closure to capture the file information.
             reader.onload = (function (theFile) {
                return function (e) {
+                  fileName = theFile.name;
                   xmlConverter.resourceToData(e.target.result);
                   htmlEl.innerHTML = htmlConverter.dataToResource(xmlConverter.getData());
                   btnDownload.style.display = 'block';
+                  showMessage('', false);
                };
             })(f);
 
@@ -86,19 +105,34 @@
          }
       });
 
-      function editIt(el, id) {
-         let src = document.getElementById("title_" + id);
-         let name = el.getAttribute('data-name');
-         let parent = el.getAttribute('data-parent');
-         inId = el.getAttribute('data-iid');
-         src.parentElement.innerHTML = htmlInput(parent, name, '');
+      function titleClick(lnk) {
+         const id = parseInt(lnk.getAttribute('data-id'));
+         if (htmlConverter.copyTag(id) > -1) {
+            htmlEl.innerHTML = htmlConverter.dataToResource(htmlConverter.getData());
+         }
+
+         return false;
+      }
+
+      function showMessage(text, show, isError) {
+         const m = document.getElementById("message");
+         if (show) {
+            m.innerHTML = text;
+            m.style.display = 'block';
+         } else {
+            m.style.display = 'none';
+         }
       }
 
       function generateFile(btn) {
          const xmlData = xmlConverter.dataToResource(htmlConverter.resourceToData(htmlEl));
          const xmlString = new XMLSerializer().serializeToString(xmlData);
          //document.getElementById('xmlResult').innerHTML = xmlString;
-         downloadFile('filename.xml', xmlString);
+         let tmpName = 'edited.xml';
+         if (fileName) {
+            tmpName = 'edited-' + fileName;
+         }
+         downloadFile(tmpName, xmlString);
       }
 
       function downloadFile(filename, text) {
